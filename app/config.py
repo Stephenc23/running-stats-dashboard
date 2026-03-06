@@ -2,6 +2,7 @@
 from functools import lru_cache
 from typing import Optional
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,9 +19,22 @@ class Settings(BaseSettings):
     app_name: str = "Running Stats Dashboard API"
     debug: bool = False
 
-    # Database
+    # Database (Render etc. give postgresql:// – we need postgresql+asyncpg://)
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/running_stats"
+
     database_echo: bool = False
+
+    @field_validator("database_url")
+    @classmethod
+    def ensure_asyncpg(cls, v: str) -> str:
+        # Render and others may give postgresql:// or postgresql+psycopg2://; we need asyncpg
+        if "+asyncpg" in v:
+            return v
+        if "psycopg2" in v:
+            return v.replace("postgresql+psycopg2", "postgresql+asyncpg", 1)
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
