@@ -1,4 +1,4 @@
-const API_BASE = ''
+const API_BASE = import.meta.env.VITE_API_BASE || ''
 
 function getToken() {
   return localStorage.getItem('token')
@@ -28,8 +28,11 @@ async function request(method, path, body = null, formData = false) {
     throw new Error('Unauthorized')
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(Array.isArray(err.detail) ? err.detail.map(d => d.msg || d).join(', ') : (err.detail || res.statusText))
+    const err = await res.json().catch(() => ({ detail: res.statusText || 'Request failed' }))
+    const msg = Array.isArray(err.detail)
+      ? err.detail.map((d) => (d.msg != null ? d.msg : d)).join(', ')
+      : (err.detail || res.statusText || 'Request failed')
+    throw new Error(msg)
   }
   if (res.status === 204) return null
   return res.json()

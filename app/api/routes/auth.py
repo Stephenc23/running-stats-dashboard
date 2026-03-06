@@ -17,18 +17,26 @@ settings = get_settings()
 
 @router.post("/register", response_model=UserResponse)
 async def register(user_in: UserCreate, db: Annotated[AsyncSession, Depends(get_db)]) -> User:
-    existing = await get_user_by_email(db, user_in.email)
-    if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    user = User(
-        email=user_in.email,
-        hashed_password=get_password_hash(user_in.password),
-        full_name=user_in.full_name,
-    )
-    db.add(user)
-    await db.flush()
-    await db.refresh(user)
-    return user
+    try:
+        existing = await get_user_by_email(db, user_in.email)
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        user = User(
+            email=user_in.email,
+            hashed_password=get_password_hash(user_in.password),
+            full_name=user_in.full_name,
+        )
+        db.add(user)
+        await db.flush()
+        await db.refresh(user)
+        return user
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 
 @router.post("/login", response_model=Token)
