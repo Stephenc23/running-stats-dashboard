@@ -98,10 +98,15 @@ Set these environment variables in Render:
 - `SECRET_KEY`
 - optional: `RUN_MIGRATIONS=1` (default)
 
-If deploy logs show `socket.gaierror` or host like `dpg-xxxx-a` (no `.render.com`),
-Render is using an incomplete linked DB URL. Either:
-- set `DATABASE_EXTERNAL_URL` to the full external URL, or
-- unlink the old Postgres resource from the web service and set `DATABASE_URL` only.
+If deploy logs show host like `dpg-xxxx-a` (no `.render.com`), Render is still using a
+linked old Postgres URL. Fix with **one** of these:
+
+1. **Discrete vars (easiest on Render)** — add to web service Environment:
+   - `PGHOST` = `dpg-xxxx.oregon-postgres.render.com`
+   - `PGPORT` = `5432`
+   - `PGUSER`, `PGPASSWORD`, `PGDATABASE` from your Postgres dashboard
+2. `DATABASE_EXTERNAL_URL` = full External Database URL
+3. Unlink old Postgres from the web service, then set `DATABASE_URL` only
 
 ## API overview
 

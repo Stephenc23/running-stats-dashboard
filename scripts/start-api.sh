@@ -24,8 +24,11 @@ print(f"Configured database host: {host}")
 if os.getenv("RENDER") and is_incomplete_render_host(host):
     print(
         "ERROR: Database host looks incomplete for Render "
-        f"({host!r}). Use External Database URL in DATABASE_EXTERNAL_URL, "
-        "or unlink the old Postgres resource from this web service.",
+        f"({host!r}).\n"
+        "Fix one of these:\n"
+        "  1) Add DATABASE_EXTERNAL_URL with full External Database URL, OR\n"
+        "  2) Set PGHOST/PGUSER/PGPASSWORD/PGDATABASE (see README), OR\n"
+        "  3) Unlink old Postgres from this web service.",
         file=sys.stderr,
     )
     sys.exit(1)
