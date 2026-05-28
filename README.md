@@ -82,6 +82,15 @@ A React dashboard runs in the `frontend/` folder. It uses Vite and proxies API r
 
 3. Open **http://localhost:5173** in your browser. Sign up or log in, then use Dashboard, Runs, Upload GPX, and Recommendations.
 
+### Frontend on Vercel (with API on Render)
+
+1. Import the repo in Vercel, root directory: `frontend`
+2. Add environment variable:
+   - `VITE_API_BASE` = `https://<your-render-api>.onrender.com` (no trailing slash)
+3. Deploy (includes `vercel.json` for client-side routes)
+
+If login shows `404: NOT_FOUND`, `VITE_API_BASE` is missing or wrong — the app is calling Vercel instead of Render.
+
 ## Render (Docker) deployment
 
 The container now starts via `scripts/start-api.sh`, which:

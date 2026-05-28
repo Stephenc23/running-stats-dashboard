@@ -1,4 +1,8 @@
-const API_BASE = import.meta.env.VITE_API_BASE || ''
+const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
+
+export function getApiBase() {
+  return API_BASE
+}
 
 function getToken() {
   return localStorage.getItem('token')
@@ -29,9 +33,13 @@ async function request(method, path, body = null, formData = false) {
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText || 'Request failed' }))
-    const msg = Array.isArray(err.detail)
+    let msg = Array.isArray(err.detail)
       ? err.detail.map((d) => (d.msg != null ? d.msg : d)).join(', ')
       : (err.detail || res.statusText || 'Request failed')
+    if (res.status === 404 && !API_BASE && import.meta.env.PROD) {
+      msg =
+        'API not found. Set VITE_API_BASE to your Render API URL in Vercel environment variables and redeploy.'
+    }
     throw new Error(msg)
   }
   if (res.status === 204) return null
