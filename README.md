@@ -50,18 +50,28 @@ Backend for a running analytics platform: GPS processing, pace/splits, and perso
 
 ### Docker
 
+One-command startup from the repo root:
+
 ```bash
-docker compose up -d
+make up
 ```
 
 API: http://localhost:8000  
 Docs: http://localhost:8000/docs
 
+Helpful commands:
+
+```bash
+make logs      # stream service logs
+make down      # stop everything
+make api-shell # shell inside API container
+```
+
 ## Frontend
 
 A React dashboard runs in the `frontend/` folder. It uses Vite and proxies API requests to the backend.
 
-1. Ensure the API is running (e.g. `docker compose up -d` or `uvicorn app.main:app --reload`).
+1. Ensure the API is running (e.g. `make up` or `uvicorn app.main:app --reload`).
 2. From the project root:
 
    ```bash
@@ -71,6 +81,21 @@ A React dashboard runs in the `frontend/` folder. It uses Vite and proxies API r
    ```
 
 3. Open **http://localhost:5173** in your browser. Sign up or log in, then use Dashboard, Runs, Upload GPX, and Recommendations.
+
+## Render (Docker) deployment
+
+The container now starts via `scripts/start-api.sh`, which:
+
+1. runs `alembic upgrade head` (unless `RUN_MIGRATIONS=0`)
+2. starts Uvicorn on `$PORT` (Render sets this automatically)
+
+Set these environment variables in Render:
+
+- `DATABASE_URL` (Postgres URL; `postgresql://...` is fine)
+- `REDIS_URL`
+- `CELERY_BROKER_URL`
+- `SECRET_KEY`
+- optional: `RUN_MIGRATIONS=1` (default)
 
 ## API overview
 
