@@ -91,11 +91,17 @@ The container now starts via `scripts/start-api.sh`, which:
 
 Set these environment variables in Render:
 
-- `DATABASE_URL` (Postgres URL; `postgresql://...` is fine)
+- `DATABASE_EXTERNAL_URL` = Postgres **External Database URL** (recommended on Render)
+- `DATABASE_URL` can stay linked, but `DATABASE_EXTERNAL_URL` takes priority
 - `REDIS_URL`
 - `CELERY_BROKER_URL`
 - `SECRET_KEY`
 - optional: `RUN_MIGRATIONS=1` (default)
+
+If deploy logs show `socket.gaierror` or host like `dpg-xxxx-a` (no `.render.com`),
+Render is using an incomplete linked DB URL. Either:
+- set `DATABASE_EXTERNAL_URL` to the full external URL, or
+- unlink the old Postgres resource from the web service and set `DATABASE_URL` only.
 
 ## API overview
 

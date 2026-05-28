@@ -1,9 +1,11 @@
 """Application configuration."""
 from functools import lru_cache
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.db_url import normalize_database_url, raw_database_url_from_env
 
 
 class Settings(BaseSettings):
@@ -24,17 +26,21 @@ class Settings(BaseSettings):
 
     database_echo: bool = False
 
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_database_url_from_env(cls, data: Any) -> Any:
+        """DATABASE_EXTERNAL_URL wins over Render-linked DATABASE_URL."""
+        if not isinstance(data, dict):
+            return data
+        env_url = raw_database_url_from_env()
+        if env_url:
+            data["database_url"] = env_url
+        return data
+
     @field_validator("database_url")
     @classmethod
     def ensure_asyncpg(cls, v: str) -> str:
-        # Render and others may give postgresql:// or postgresql+psycopg2://; we need asyncpg
-        if "+asyncpg" in v:
-            return v
-        if "psycopg2" in v:
-            return v.replace("postgresql+psycopg2", "postgresql+asyncpg", 1)
-        if v.startswith("postgresql://"):
-            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
-        return v
+        return normalize_database_url(v)
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

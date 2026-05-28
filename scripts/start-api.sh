@@ -3,33 +3,33 @@ set -eu
 
 cd /app
 
-DB_HOST="$(python - <<'PY'
+python - <<'PY'
 import os
-from urllib.parse import urlparse
+import sys
 
-url = os.getenv("DATABASE_URL", "")
+from app.db_url import (
+    database_hostname,
+    is_incomplete_render_host,
+    raw_database_url_from_env,
+)
+
+url = raw_database_url_from_env()
 if not url:
-    print("missing")
-else:
-    try:
-        print(urlparse(url).hostname or "unknown")
-    except Exception:
-        print("unknown")
+    print("ERROR: Set DATABASE_URL or DATABASE_EXTERNAL_URL.", file=sys.stderr)
+    sys.exit(1)
+
+host = database_hostname(url) or "unknown"
+print(f"Configured database host: {host}")
+
+if os.getenv("RENDER") and is_incomplete_render_host(host):
+    print(
+        "ERROR: Database host looks incomplete for Render "
+        f"({host!r}). Use External Database URL in DATABASE_EXTERNAL_URL, "
+        "or unlink the old Postgres resource from this web service.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 PY
-)"
-
-if [ "$DB_HOST" = "missing" ]; then
-  echo "ERROR: DATABASE_URL is not set."
-  exit 1
-fi
-
-echo "Configured database host: $DB_HOST"
-
-if [ "${RENDER:-}" != "" ] && [ "$DB_HOST" = "db" ]; then
-  echo "ERROR: DATABASE_URL points to host 'db', which only works in docker-compose."
-  echo "Set DATABASE_URL to your Render Postgres internal/external hostname."
-  exit 1
-fi
 
 if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
   MIGRATION_ATTEMPTS="${MIGRATION_ATTEMPTS:-8}"
