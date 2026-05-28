@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import re
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 
 def build_database_url_from_components() -> str:
@@ -19,10 +19,9 @@ def build_database_url_from_components() -> str:
     if not all([host, user, password, database]):
         return ""
 
-    ssl = "?sslmode=require" if "render.com" in host else ""
     return (
         f"postgresql://{quote_plus(user)}:{quote_plus(password)}"
-        f"@{host}:{port}/{database}{ssl}"
+        f"@{host}:{port}/{database}"
     )
 
 
@@ -44,6 +43,20 @@ def raw_database_url_from_env() -> str:
     return external or primary
 
 
+def strip_asyncpg_unsupported_query_params(url: str) -> str:
+    """Remove query params asyncpg.connect() does not accept (e.g. sslmode)."""
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    for key in ("sslmode", "sslrootcert", "sslcert", "sslkey"):
+        params.pop(key, None)
+
+    new_query = urlencode(params, doseq=True) if params else ""
+    return urlunparse(parsed._replace(query=new_query))
+
+
 def normalize_database_url(url: str) -> str:
     """Normalize Postgres URL for SQLAlchemy asyncpg."""
     cleaned = url.strip().strip('"').strip("'")
@@ -54,12 +67,15 @@ def normalize_database_url(url: str) -> str:
         cleaned = "postgresql://" + cleaned[len("postgres://") :]
 
     if "+asyncpg" in cleaned:
-        return cleaned
-    if "psycopg2" in cleaned:
-        return cleaned.replace("postgresql+psycopg2", "postgresql+asyncpg", 1)
-    if cleaned.startswith("postgresql://"):
-        return cleaned.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return cleaned
+        normalized = cleaned
+    elif "psycopg2" in cleaned:
+        normalized = cleaned.replace("postgresql+psycopg2", "postgresql+asyncpg", 1)
+    elif cleaned.startswith("postgresql://"):
+        normalized = cleaned.replace("postgresql://", "postgresql+asyncpg://", 1)
+    else:
+        normalized = cleaned
+
+    return strip_asyncpg_unsupported_query_params(normalized)
 
 
 def database_hostname(url: str) -> str | None:
@@ -79,7 +95,8 @@ def is_incomplete_render_host(host: str | None) -> bool:
 
 
 def asyncpg_connect_args(database_url: str) -> dict:
-    """Render external Postgres requires SSL."""
-    if "sslmode=require" in database_url or "render.com" in database_url:
+    """Render external Postgres requires SSL (via connect_args, not sslmode URL param)."""
+    host = database_hostname(database_url) or ""
+    if "render.com" in host or "render.com" in database_url:
         return {"ssl": True}
     return {}
